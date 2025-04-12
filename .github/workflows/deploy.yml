@@ -1,0 +1,47 @@
+name: Build and Deploy to FTP
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install client dependencies
+        run: cd client && npm install
+
+      - name: Build client
+        run: cd client && npm run build
+
+      - name: Prepare upload directory
+        run: |
+          mkdir -p upload
+          cp -r client/build/* upload/
+          cp -r server/* upload/
+
+      - name: Upload to FTP server
+        uses: SamKirkland/FTP-Deploy-Action@4.3.0
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./upload/
+          server-dir: /
+
+      - name: Install server dependencies
+        run: npm install
+
+      - name: Start server
+        run: nohup npm run start &
